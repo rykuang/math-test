@@ -308,28 +308,105 @@
         }
         #math-input:focus { box-shadow: 0 0 15px rgba(212, 175, 55, 0.6); }
 
-        #hint-btn {
+        /* New styles for Corner Hint Button and Full Screen Modal */
+        #hint-corner-btn {
+            position: absolute;
+            top: 3vh;
+            right: 3vw;
             background: linear-gradient(180deg, #9b59b6, #8e44ad);
-            font-size: clamp(14px, 1.5vw, 22px);
-            padding: 1vh 2vw;
             border-color: #8e44ad;
             box-shadow: 0 5px 15px rgba(142, 68, 173, 0.4);
-            margin-top: 1vh;
-        }
-        #hint-btn:disabled {
-            filter: grayscale(1);
-            cursor: not-allowed;
-        }
-        #hint-text {
             font-size: clamp(14px, 1.5vw, 20px);
-            color: #e056fd;
-            margin-top: 1vh;
-            width: 100%;
-            font-style: italic;
-            text-align: center;
-            min-height: 60px; /* Keeps the UI from jumping when text loads */
+            padding: 1vh 2vw;
+            z-index: 50;
         }
 
+        #hint-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        #hint-modal-content {
+            background: #16213e;
+            border: 4px solid #9b59b6;
+            border-radius: 12px;
+            padding: 4vh 4vw;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(155, 89, 182, 0.5);
+        }
+
+        #hint-modal h2 {
+            color: #e056fd;
+            font-family: 'Cinzel', serif;
+            font-size: clamp(24px, 3vw, 36px);
+            margin-top: 0;
+        }
+
+        #visual-hint-container {
+            font-size: clamp(1.5rem, 3vw, 2.5rem);
+            margin: 3vh 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2vh;
+            align-items: center;
+        }
+
+        .hint-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.5vw;
+            background: rgba(255,255,255,0.05);
+            padding: 1.5vh 2vw;
+            border-radius: 12px;
+            max-width: 100%;
+            line-height: 1.2;
+        }
+
+        .hint-crossed {
+            opacity: 0.3;
+            filter: grayscale(1);
+            position: relative;
+        }
+        .hint-crossed::after {
+            content: "❌";
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.8em;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+
+        #close-hint-btn {
+            background: linear-gradient(180deg, #e74c3c, #c0392b);
+            border-color: #c0392b;
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+            margin-top: 2vh;
+        }
+
+        #math-ui {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 2vh;
+            margin-bottom: 2vh;
+            width: 100%;
+        }
+        #equation { font-size: clamp(32px, 4vw, 48px); font-weight: bold; margin: 0; }
+        
         #timing-ui {
             display: none;
             width: 100%;
@@ -358,6 +435,7 @@
 <body>
 
     <div id="game-wrapper">
+        <button id="hint-corner-btn" onclick="openHintModal()">Ask Wizard for Hint</button>
         <h1>Math Knight</h1>
         <div id="level-info">Level 1</div>
         
@@ -382,20 +460,22 @@
         <div id="message-log">A new Demon appears! Calculate to prime your blade.</div>
 
         <div id="math-ui">
-            <div id="math-core-ui">
-                <span id="equation">?</span>
-                <input type="number" id="math-input" placeholder="?" onkeypress="handleEnter(event)" />
-                <button onclick="chargeSword()">Charge Magic</button>
-            </div>
-            
-            <div id="math-hint-ui">
-                <button id="hint-btn" onclick="getHint()">Ask Wizard for Hint</button>
-                <div id="hint-text"></div>
-            </div>
+            <span id="equation">?</span>
+            <input type="number" id="math-input" placeholder="?" onkeypress="handleEnter(event)" />
+            <button onclick="chargeSword()">Charge Magic</button>
         </div>
 
         <div id="timing-ui">
             <button onclick="slash()">⚡ SLASH! ⚡</button>
+        </div>
+    </div>
+
+    <!-- Full Page Visual Hint Modal -->
+    <div id="hint-modal">
+        <div id="hint-modal-content">
+            <h2>Wizard's Visual Hint</h2>
+            <div id="visual-hint-container"></div>
+            <button id="close-hint-btn" onclick="closeHintModal()">Understood!</button>
         </div>
     </div>
 
@@ -454,6 +534,9 @@
         // Game State Variables
         let currentAnswer = 0;
         let playerCurrentAnswer = 0;
+        let currentNum1 = 0;
+        let currentNum2 = 0;
+        let currentOp = '+';
         let enemyMaxHP = 4;
         let enemyHP = 4;
         let isAttacking = false;
@@ -470,8 +553,8 @@
         // Enemy Data
         const demonList = [
             { name: "Dust-Mite Golem", file: "demon_1_action.png", moveClass: "move-side-to-side", baseSpeed: 3 },
-            { name: "Chaos Construct", file: "demon_4_action.png", moveClass: "move-diagonal", baseSpeed: 2.5 },
-            { name: "Rune Weaver", file: "demon_1_action.png", moveClass: "move-circular", baseSpeed: 4 },
+            { name: "Chaos Construct", file: "demon_2-action.png", moveClass: "move-diagonal", baseSpeed: 2.5 },
+            { name: "Rune Weaver", file: "demon_3-action.png", moveClass: "move-circular", baseSpeed: 4 },
             { name: "Void Emissary", file: "demon_4_action.png", moveClass: "move-blink", baseSpeed: 4 },
             { name: "Shadow Dancer", file: "demon_1_action.png", moveClass: "move-random", baseSpeed: 3 }
         ];
@@ -484,9 +567,6 @@
         const mathUI = document.getElementById('math-ui');
         const timingUI = document.getElementById('timing-ui');
         
-        const hintBtn = document.getElementById('hint-btn');
-        const hintText = document.getElementById('hint-text');
-
         const heroContainer = document.getElementById('hero-container');
         const enemyContainer = document.getElementById('enemy-container');
         const enemyNameEl = document.getElementById('enemy-name');
@@ -541,7 +621,7 @@
         }
 
         async function fetchGeminiTTS(text, voiceName = "Charon") {
-            const apiKey = ""; // Canvas handles this automatically
+            const apiKey = "YOUR_GEMINI_API_KEY_HERE"; // PASTE YOUR KEY HERE
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
             
             const payload = {
@@ -581,7 +661,7 @@
         }
 
         async function fetchGeminiText(userQuery, systemPrompt = "", retries = 3, delay = 1000) {
-            const apiKey = ""; // Canvas provides this automatically!
+            const apiKey = "YOUR_GEMINI_API_KEY_HERE"; // PASTE YOUR KEY HERE
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
             
             const payload = {
@@ -613,8 +693,6 @@
         }
 
         function generateProblem() {
-            if (hintText) hintText.innerText = '';
-
             if (isSameQuestion) {
                 // Keep the same question, just clear input
                 mathInputEl.value = '';
@@ -630,6 +708,7 @@
                 else if (difficultyLevel === 1) { num1 = Math.floor(Math.random() * 9) + 1; num2 = Math.floor(Math.random() * 10) + 10; questionDamage = 2; }
                 else { num1 = Math.floor(Math.random() * 9) + 1; num2 = Math.floor(Math.random() * 40) + 20; questionDamage = 3; }
                 currentAnswer = num1 + num2;
+                currentOp = '+';
                 equationEl.innerText = `${num1} + ${num2} = ?`;
             } else if (currentLevel === 2) { 
                 // Level 2: Subtraction (No negatives)
@@ -637,6 +716,7 @@
                 else if (difficultyLevel === 1) { num1 = Math.floor(Math.random() * 10) + 10; num2 = Math.floor(Math.random() * 9) + 1; questionDamage = 2; }
                 else { num1 = Math.floor(Math.random() * 30) + 20; num2 = Math.floor(Math.random() * (num1 - 10)) + 10; questionDamage = 3; }
                 currentAnswer = num1 - num2;
+                currentOp = '-';
                 equationEl.innerText = `${num1} - ${num2} = ?`;
             } else { 
                 // Level 3: Multiplication
@@ -644,9 +724,14 @@
                 else if (difficultyLevel === 1) { num1 = Math.floor(Math.random() * 8) + 2; num2 = Math.floor(Math.random() * 4) + 2; questionDamage = 2; }
                 else { num1 = Math.floor(Math.random() * 4) + 6; num2 = Math.floor(Math.random() * 4) + 6; questionDamage = 3; }
                 currentAnswer = num1 * num2;
+                currentOp = '×';
                 equationEl.innerText = `${num1} × ${num2} = ?`;
             }
             
+            // Store the values globally so the visual hint engine can read them later
+            currentNum1 = num1;
+            currentNum2 = num2;
+
             mathInputEl.value = '';
             mathInputEl.focus();
         }
@@ -657,47 +742,45 @@
             }
         }
 
-        async function getHint() {
-            const equation = equationEl.innerText;
-            if (equation === '?') return;
+        function openHintModal() {
+            const container = document.getElementById('visual-hint-container');
+            container.innerHTML = ''; 
+            
+            // Helper to generate the exact number of magic orbs
+            const renderOrbs = (count) => Array(count).fill('🔮').join('');
 
-            hintBtn.disabled = true;
-            hintBtn.innerText = "Consulting Wizard...";
-            hintText.innerText = "The wizard is pondering your equation...";
-            hintText.style.color = "#c5c6c7";
-
-            const prompt = `Explain how to solve this math problem: ${equation} in a way that a 5 year old will understand. Do NOT tell them the final answer. Give them a fun, simple conceptual way to think about it using apples, blocks, or counting. Keep it under 3 sentences.`;
-            const systemPrompt = "You are a helpful and wise wizard guiding a young Math Knight named Chloe. You must never reveal the exact numerical answer. Address her directly by name occasionally.";
-
-            const hint = await fetchGeminiText(prompt, systemPrompt);
-
-            if (hint) {
-                const cleanHint = hint.replace(/["*]/g, '').trim();
-                hintText.innerText = `🧙‍♂️ "${cleanHint}"`;
-                hintText.style.color = "#e056fd";
-                hintBtn.innerText = "Wizard is speaking...";
-
-                // Ask the TTS model to read the hint out loud
-                const audioUrl = await fetchGeminiTTS(`Say in a wise, gentle voice: ${cleanHint}`, 'Charon');
-                
-                if (audioUrl) {
-                    const audio = new Audio(audioUrl);
-                    audio.play();
-                    audio.onended = () => {
-                        hintBtn.disabled = false;
-                        hintBtn.innerText = "Ask Wizard for Hint";
-                    };
-                } else {
-                    // Fallback if audio fails to load
-                    hintBtn.disabled = false;
-                    hintBtn.innerText = "Ask Wizard for Hint";
+            if (currentOp === '+') {
+                container.innerHTML = `
+                    <div class="hint-group">${renderOrbs(currentNum1)}</div>
+                    <div>➕</div>
+                    <div class="hint-group">${renderOrbs(currentNum2)}</div>
+                `;
+            } else if (currentOp === '-') {
+                let html = '<div class="hint-group">';
+                for(let i = 0; i < currentNum1; i++) {
+                    if (i < currentNum1 - currentNum2) {
+                        html += `<span>🔮</span>`;
+                    } else {
+                        html += `<span class="hint-crossed">🔮</span>`;
+                    }
                 }
-            } else {
-                hintText.innerText = "The wizard is currently meditating. Try again later!";
-                hintText.style.color = "#ff6b6b";
-                hintBtn.disabled = false;
-                hintBtn.innerText = "Ask Wizard for Hint";
+                html += '</div>';
+                html += '<div style="font-size: 0.6em; color: #a8dadc; margin-top: 1vh;">(Count the remaining orbs)</div>';
+                container.innerHTML = html;
+            } else if (currentOp === '×') {
+                let html = '';
+                for(let r = 0; r < currentNum1; r++) {
+                    html += `<div class="hint-group">${renderOrbs(currentNum2)}</div>`;
+                }
+                container.innerHTML = html;
             }
+
+            document.getElementById('hint-modal').style.display = 'flex';
+        }
+
+        function closeHintModal() {
+            document.getElementById('hint-modal').style.display = 'none';
+            mathInputEl.focus();
         }
 
         function chargeSword() {

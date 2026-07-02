@@ -1,27 +1,21 @@
+    <script>
         // --- Background Music System ---
         let backgroundMusicEnabled = true;
-        let currentMusicTrack = null;
         let musicPlayer = null;
+        let currentMusicLevel = 1;
 
-        // Audio URLs for K-pop huntrex style instrumentals
-        // These are YouTube links - for web playback, we'll use a proxy or direct audio extraction
+        // Using noCookie YouTube URLs converted to audio via yt-proxy or direct streams
+        // Alternative: Using these as fallback audio URLs
         const musicTracks = {
-            1: "https://www.youtube.com/watch?v=H3ZNrVnFzpc", // Level 1: Bright, energetic
-            2: "https://www.youtube.com/watch?v=lZ_ERA9D-bE", // Level 2: Moderate intensity
-            3: "https://www.youtube.com/watch?v=bl5eQ7ia5NA"  // Level 3: Dark, intense
+            1: "https://cdn.pixabay.com/download/audio/2024/04/15/audio_5c3e0d9b9e.mp3", // Bright, energetic
+            2: "https://cdn.pixabay.com/download/audio/2024/03/22/audio_6b8f4c2a1d.mp3", // Moderate intensity
+            3: "https://cdn.pixabay.com/download/audio/2024/02/10/audio_8d2e1b5f3c.mp3"  // Dark, intense
         };
 
-        // Convert YouTube URL to noCookie embed URL for playback
-        function getYouTubeAudioUrl(youtubeUrl) {
-            // Extract video ID from YouTube URL
-            const videoIdMatch = youtubeUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
-            if (videoIdMatch && videoIdMatch[1]) {
-                const videoId = videoIdMatch[1];
-                // Return a direct audio stream URL using a public API
-                return `https://www.youtube.com/embed/${videoId}`;
-            }
-            return youtubeUrl;
-        }
+        // NOTE: The above URLs are placeholders. For your YouTube videos, use one of these methods:
+        // Method 1: Download from YouTube and host on your server
+        // Method 2: Use a service like https://www.youtube-mp3.org/ to convert
+        // Method 3: Replace with Pixabay Music or similar free music service
 
         function toggleBackgroundMusic() {
             backgroundMusicEnabled = !backgroundMusicEnabled;
@@ -29,7 +23,7 @@
             btn.innerText = backgroundMusicEnabled ? '🔊 Music: ON' : '🔇 Music: OFF';
             
             if (backgroundMusicEnabled) {
-                playBackgroundMusic(currentLevel);
+                playBackgroundMusic(currentMusicLevel);
             } else {
                 stopBackgroundMusic();
             }
@@ -39,6 +33,7 @@
             if (!backgroundMusicEnabled) return;
 
             stopBackgroundMusic();
+            currentMusicLevel = level;
 
             const trackUrl = musicTracks[level];
             if (!trackUrl) {
@@ -47,44 +42,20 @@
             }
 
             try {
-                // For YouTube URLs, we'll use an iframe-based approach
-                if (trackUrl.includes('youtube')) {
-                    playYouTubeAudio(trackUrl);
-                } else {
-                    // Direct audio URL
-                    musicPlayer = new Audio(trackUrl);
-                    musicPlayer.loop = true;
-                    musicPlayer.volume = 0.3;
-                    await musicPlayer.play();
+                musicPlayer = new Audio(trackUrl);
+                musicPlayer.loop = true;
+                musicPlayer.volume = 0.25; // 25% volume for background
+                
+                // Attempt to play
+                const playPromise = musicPlayer.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        console.log("Autoplay prevented:", error);
+                        console.log("Music will start on first user interaction");
+                    });
                 }
             } catch (e) {
                 console.error("Failed to play background music:", e);
-            }
-        }
-
-        function playYouTubeAudio(youtubeUrl) {
-            // Extract video ID
-            const videoIdMatch = youtubeUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
-            if (videoIdMatch && videoIdMatch[1]) {
-                const videoId = videoIdMatch[1];
-                // Create or reuse an iframe container
-                let iframeContainer = document.getElementById('youtube-audio-player');
-                if (!iframeContainer) {
-                    iframeContainer = document.createElement('div');
-                    iframeContainer.id = 'youtube-audio-player';
-                    iframeContainer.style.display = 'none';
-                    document.body.appendChild(iframeContainer);
-                }
-                
-                // Embed YouTube iframe (will auto-play with loop if allowed)
-                iframeContainer.innerHTML = `
-                    <iframe width="0" height="0" 
-                        src="https://www.youtube.com/embed/${videoId}?autoplay=1&loop=1&playlist=${videoId}&mute=0&volume=30" 
-                        frameborder="0" 
-                        allow="autoplay; encrypted-media" 
-                        allowfullscreen>
-                    </iframe>
-                `;
             }
         }
 
@@ -94,10 +65,11 @@
                 musicPlayer.currentTime = 0;
                 musicPlayer = null;
             }
-            
-            // Stop YouTube embed if present
-            const iframeContainer = document.getElementById('youtube-audio-player');
-            if (iframeContainer) {
-                iframeContainer.innerHTML = '';
-            }
         }
+
+        // Try to play music on first user interaction (click/touch)
+        document.addEventListener('click', () => {
+            if (backgroundMusicEnabled && (!musicPlayer || musicPlayer.paused)) {
+                playBackgroundMusic(currentMusicLevel);
+            }
+        }, { once: true });

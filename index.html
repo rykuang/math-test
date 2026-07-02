@@ -252,7 +252,7 @@
             position: absolute;
             width: 200px;
             height: 200px;
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M10,90 L90,10" stroke="%23fff" stroke-width="8" stroke-linecap="round"/><path d="M10,90 L90,10" stroke="%23f2a900" stroke-width="4" stroke-linecap="round"/></svg>') no-repeat center;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M10,90 L90,10" stroke="%23fff" stroke-width="8" stroke-linecap="round"/[...]
             background-size: contain;
             opacity: 0;
             z-index: 20;
@@ -320,6 +320,26 @@
             padding: 1vh 2vw;
             z-index: 50;
         }
+
+        #music-toggle-btn {
+            position: absolute;
+            top: 3vh;
+            left: 3vw;
+            background: linear-gradient(180deg, #3498db, #2980b9);
+            border-color: #2980b9;
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+            font-size: clamp(14px, 1.5vw, 20px);
+            padding: 1vh 2vw;
+            z-index: 50;
+            border: 2px solid #2980b9;
+            border-radius: 12px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+            transition: transform 0.1s, filter 0.2s;
+        }
+        #music-toggle-btn:hover { filter: brightness(1.2); transform: scale(1.05); }
+        #music-toggle-btn:active { transform: scale(0.95); }
 
         #hint-modal {
             position: fixed;
@@ -435,6 +455,7 @@
 <body>
 
     <div id="game-wrapper">
+        <button id="music-toggle-btn" onclick="toggleBackgroundMusic()">🔊 Music: ON</button>
         <button id="hint-corner-btn" onclick="openHintModal()">Ask Wizard for Hint</button>
         <h1>Math Knight</h1>
         <div id="level-info">Level 1</div>
@@ -480,6 +501,60 @@
     </div>
 
     <script>
+        // --- Background Music System ---
+        let backgroundMusicEnabled = true;
+        let currentMusicTrack = null;
+        let musicPlayer = null;
+
+        // Audio URLs for K-pop huntrex style instrumentals
+        // Replace these with actual K-pop huntrex instrumental URLs
+        const musicTracks = {
+            1: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", // Level 1: Bright, energetic
+            2: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", // Level 2: Moderate intensity
+            3: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"  // Level 3: Dark, intense
+        };
+
+        function toggleBackgroundMusic() {
+            backgroundMusicEnabled = !backgroundMusicEnabled;
+            const btn = document.getElementById('music-toggle-btn');
+            btn.innerText = backgroundMusicEnabled ? '🔊 Music: ON' : '🔇 Music: OFF';
+            
+            if (backgroundMusicEnabled) {
+                playBackgroundMusic(currentLevel);
+            } else {
+                stopBackgroundMusic();
+            }
+        }
+
+        async function playBackgroundMusic(level) {
+            if (!backgroundMusicEnabled) return;
+
+            stopBackgroundMusic();
+
+            const trackUrl = musicTracks[level];
+            if (!trackUrl) {
+                console.warn(`No music track found for level ${level}`);
+                return;
+            }
+
+            try {
+                musicPlayer = new Audio(trackUrl);
+                musicPlayer.loop = true;
+                musicPlayer.volume = 0.3; // Set background music to 30% volume so it doesn't overpower SFX
+                await musicPlayer.play();
+            } catch (e) {
+                console.error("Failed to play background music:", e);
+            }
+        }
+
+        function stopBackgroundMusic() {
+            if (musicPlayer) {
+                musicPlayer.pause();
+                musicPlayer.currentTime = 0;
+                musicPlayer = null;
+            }
+        }
+
         // --- Tone.js Sound Effects Setup ---
         let isAudioInitialized = false;
         let synthMiss, synthParry, synthHit, noiseHit;
@@ -967,6 +1042,10 @@
                 levelInfoEl.innerText = `Level ${currentLevel}`;
                 messageLogEl.innerText = `LEVEL UP! Welcome to Level ${currentLevel}`;
                 messageLogEl.style.color = "#a8dadc";
+                
+                // Stop old music and play new level music
+                playBackgroundMusic(currentLevel);
+                
                 setTimeout(spawnNextEnemy, 2000);
             }
         }
@@ -998,27 +1077,15 @@
             
             messageLogEl.innerText = `A new ${enemyData.name} appears! Prime your magic.`;
             messageLogEl.style.color = "#a8dadc";
-            
-            // Asynchronously fetch a custom enemy taunt
-            fetchGeminiText(
-                `Taunt the player, Chloe, in one short, menacing sentence. Keep it under 10 words. Try to use her name.`,
-                `You are a dark fantasy monster named ${enemyData.name}. You are fighting the Math Knight, Chloe.`
-            ).then(taunt => {
-                // Ensure we only show the taunt if the player hasn't already charged their magic
-                if (taunt && timingUI.style.display === 'none') {
-                    messageLogEl.innerText = `"${taunt.replace(/["*]/g, '').trim()}"`;
-                    messageLogEl.style.color = "#ff6b6b";
-                }
-            });
-            
+
             generateProblem();
         }
 
-        // Initialize first enemy on load
-        window.onload = () => {
-            spawnNextEnemy();
-        };
-
+        // Initialize game on page load
+        window.addEventListener('load', () => {
+            generateProblem();
+            playBackgroundMusic(currentLevel);
+        });
     </script>
 </body>
 </html>

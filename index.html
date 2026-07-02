@@ -279,21 +279,14 @@
             flex-direction: row;
             flex-wrap: wrap;
             justify-content: center;
-            align-items: flex-start;
-            gap: 4vw;
+            align-items: center;
+            gap: 2vw;
             margin-bottom: 2vh;
             width: 100%;
         }
-        #math-core-ui, #math-hint-ui {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1.5vh;
-            flex: 1;
-            min-width: 250px;
-            max-width: 450px;
-        }
+
         #equation { font-size: clamp(32px, 4vw, 48px); font-weight: bold; margin: 0; }
+        
         #math-input {
             font-size: clamp(24px, 3vw, 36px); 
             padding: 1vh 2vw; 
@@ -303,6 +296,42 @@
             outline: none; transition: box-shadow 0.2s;
         }
         #math-input:focus { box-shadow: 0 0 15px rgba(212, 175, 55, 0.6); }
+
+        #timing-ui {
+            display: none;
+            width: 100%;
+            margin: 0 auto;
+            margin-bottom: 2vh;
+        }
+
+        button {
+            background: linear-gradient(180deg, #f1c40f, #f39c12);
+            color: #1a1a2e; 
+            font-family: 'Cinzel', serif; 
+            font-size: clamp(20px, 2vw, 30px); 
+            font-weight: bold;
+            border: 2px solid #d4af37; 
+            padding: 2vh 4vw; 
+            border-radius: 12px;
+            cursor: pointer; 
+            transition: transform 0.1s, filter 0.2s; 
+            text-transform: uppercase;
+            box-shadow: 0 5px 15px rgba(243, 156, 18, 0.4);
+        }
+        button:hover { filter: brightness(1.2); transform: scale(1.05); }
+        button:active { transform: scale(0.95); }
+
+        #music-toggle-btn {
+            position: absolute;
+            top: 3vh;
+            left: 3vw;
+            background: linear-gradient(180deg, #3498db, #2980b9);
+            border-color: #2980b9;
+            box-shadow: 0 5px 15px rgba(41, 128, 185, 0.4);
+            font-size: clamp(14px, 1.5vw, 20px);
+            padding: 1vh 2vw;
+            z-index: 50;
+        }
 
         #hint-corner-btn {
             position: absolute;
@@ -391,45 +420,73 @@
             margin-top: 2vh;
         }
 
-        #math-ui {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 2vh;
-            margin-bottom: 2vh;
-            width: 100%;
-        }
-        
-        #timing-ui {
+        #summary-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
             display: none;
-            width: 100%;
-            margin: 0 auto;
-            margin-bottom: 2vh;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
         }
 
-        button {
-            background: linear-gradient(180deg, #f1c40f, #f39c12);
-            color: #1a1a2e; 
-            font-family: 'Cinzel', serif; 
-            font-size: clamp(20px, 2vw, 30px); 
-            font-weight: bold;
-            border: 2px solid #d4af37; 
-            padding: 2vh 4vw; 
+        #summary-modal-content {
+            background: #16213e;
+            border: 4px solid #f1c40f;
             border-radius: 12px;
-            cursor: pointer; 
-            transition: transform 0.1s, filter 0.2s; 
-            text-transform: uppercase;
-            box-shadow: 0 5px 15px rgba(243, 156, 18, 0.4);
+            padding: 4vh 4vw;
+            max-width: 95vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(241, 196, 15, 0.5);
+            width: clamp(300px, 80vw, 700px);
         }
-        button:hover { filter: brightness(1.2); transform: scale(1.05); }
-        button:active { transform: scale(0.95); }
+
+        #summary-modal h2 {
+            color: #f1c40f;
+            font-family: 'Cinzel', serif;
+            font-size: clamp(24px, 3vw, 36px);
+            margin-top: 0;
+            margin-bottom: 3vh;
+        }
+
+        .summary-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 2vw;
+            padding: 1.5vh 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            font-size: clamp(14px, 2vw, 22px);
+            text-align: center;
+            align-items: center;
+        }
+
+        .summary-header {
+            font-weight: bold;
+            color: #a8dadc;
+            border-bottom: 2px solid #a8dadc;
+        }
+
+        .correct-text { color: #2ecc71; font-weight: bold; }
+        .incorrect-text { color: #e74c3c; font-weight: bold; }
+
+        #close-summary-btn {
+            background: linear-gradient(180deg, #2ecc71, #27ae60);
+            border-color: #27ae60;
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.4);
+            margin-top: 4vh;
+        }
     </style>
 </head>
 <body>
 
     <div id="game-wrapper">
+        <button id="music-toggle-btn" onclick="toggleMusic()">Music: OFF</button>
         <button id="hint-corner-btn" onclick="openHintModal()">Ask Wizard for Hint</button>
+        
         <h1>Math Knight</h1>
         <div id="level-info">Level 1</div>
         
@@ -463,6 +520,7 @@
         </div>
     </div>
 
+    <!-- Full Page Visual Hint Modal -->
     <div id="hint-modal">
         <div id="hint-modal-content">
             <h2>Wizard's Visual Hint</h2>
@@ -471,9 +529,58 @@
         </div>
     </div>
 
+    <!-- Level Summary Modal -->
+    <div id="summary-modal">
+        <div id="summary-modal-content">
+            <h2 id="summary-title">Level Complete!</h2>
+            <div id="summary-stats"></div>
+            <button id="close-summary-btn" onclick="closeSummaryModal()">Continue Journey</button>
+        </div>
+    </div>
+
     <script>
         let isAudioInitialized = false;
         let synthMiss, synthParry, synthHit, noiseHit;
+
+        // Music Tracks Setup
+        let bgmTracks = {
+            1: new Audio('level1_bgm.mp3'),
+            2: new Audio('level2_bgm.mp3'),
+            3: new Audio('level3_bgm.mp3')
+        };
+        Object.values(bgmTracks).forEach(track => track.loop = true);
+
+        let currentLevelMusic = 1;
+        let isMusicPlaying = false;
+        let isMusicMuted = true;
+
+        function toggleMusic() {
+            const btn = document.getElementById('music-toggle-btn');
+            isMusicMuted = !isMusicMuted;
+            
+            if (isMusicMuted) {
+                btn.innerText = "Music: OFF";
+                bgmTracks[currentLevelMusic].pause();
+                isMusicPlaying = false;
+            } else {
+                btn.innerText = "Music: ON";
+                bgmTracks[currentLevelMusic].play().catch(e => console.log("Audio play blocked."));
+                isMusicPlaying = true;
+            }
+        }
+
+        function playLevelMusic(level) {
+            if (isMusicPlaying) {
+                if (bgmTracks[currentLevelMusic]) {
+                    bgmTracks[currentLevelMusic].pause();
+                    bgmTracks[currentLevelMusic].currentTime = 0;
+                }
+                currentLevelMusic = Math.min(level, 3);
+                bgmTracks[currentLevelMusic].play().catch(e => console.log("Audio play blocked."));
+            } else {
+                currentLevelMusic = Math.min(level, 3);
+            }
+        }
 
         async function initAudio() {
             if (isAudioInitialized) return;
@@ -536,6 +643,11 @@
         let questionDamage = 1;  
         let currentAnimSpeed = 3;
         
+        // Analytics tracking
+        let levelStats = [];
+        let questionStartTime = 0;
+        let answerTimeTemp = 0;
+        
         const demonList = [
             { name: "Dust-Mite Golem", file: "demon_1_action.png", moveClass: "move-side-to-side", baseSpeed: 3 },
             { name: "Chaos Construct", file: "demon_2-action.png", moveClass: "move-diagonal", baseSpeed: 2.5 },
@@ -597,12 +709,13 @@
 
             mathInputEl.value = '';
             mathInputEl.focus();
+            
+            // Start the stopwatch for analytics
+            questionStartTime = Date.now();
         }
 
         function handleEnter(e) {
-            if (e.key === 'Enter') {
-                chargeSword();
-            }
+            if (e.key === 'Enter') chargeSword();
         }
 
         function openHintModal() {
@@ -648,6 +761,8 @@
         function chargeSword() {
             if (mathInputEl.value === '') return;
             
+            answerTimeTemp = ((Date.now() - questionStartTime) / 1000).toFixed(1);
+            
             initAudio(); 
             
             playerCurrentAnswer = parseInt(mathInputEl.value);
@@ -671,7 +786,7 @@
 
             setTimeout(() => {
                 evaluateHit();
-            }, 250);
+            }, 250); 
 
             setTimeout(() => {
                 heroContainer.classList.remove('hero-attacking');
@@ -682,17 +797,17 @@
             slashEffect.classList.add('show-slash');
             setTimeout(() => slashEffect.classList.remove('show-slash'), 300);
             
-            // Hitbox Shaving fix applied here:
-            const enemyRectRaw = enemyImg.getBoundingClientRect();
-            const shaveWidth = enemyRectRaw.width * 0.3; // shave 30% off left and right
-            
-            const enemyRect = {
-                left: enemyRectRaw.left + shaveWidth,
-                right: enemyRectRaw.right - shaveWidth,
-                top: enemyRectRaw.top,
-                bottom: enemyRectRaw.bottom
-            };
+            // Shaved Hitbox Logic to ignore transparent edges
+            const rawEnemyRect = enemyImg.getBoundingClientRect();
             const zoneRect = strikeZoneEl.getBoundingClientRect();
+
+            const shaveAmount = rawEnemyRect.width * 0.30;
+            const enemyRect = {
+                left: rawEnemyRect.left + shaveAmount,
+                right: rawEnemyRect.right - shaveAmount,
+                top: rawEnemyRect.top,
+                bottom: rawEnemyRect.bottom
+            };
 
             strikeZoneEl.classList.remove('show-zone');
 
@@ -702,6 +817,15 @@
                 enemyRect.bottom < zoneRect.top ||
                 enemyRect.top > zoneRect.bottom
             );
+
+            // Record performance
+            const isMathCorrect = (playerCurrentAnswer === currentAnswer);
+            levelStats.push({ 
+                eq: `${currentNum1} ${currentOp} ${currentNum2}`, 
+                ans: playerCurrentAnswer, 
+                correct: isMathCorrect, 
+                time: answerTimeTemp 
+            });
 
             if (!isOverlapping) {
                 playMissSound();
@@ -715,7 +839,7 @@
                 isSameQuestion = false;
 
             } else {
-                if (playerCurrentAnswer !== currentAnswer) {
+                if (!isMathCorrect) {
                     playParrySound();
                     let hint = playerCurrentAnswer > currentAnswer ? "Too High" : "Too Low";
                     messageLogEl.innerText = `Parried! Math flawed (${hint})! Try the same equation again.`;
@@ -744,11 +868,8 @@
             updateHealthBar();
 
             setTimeout(() => {
-                if (enemyHP <= 0) {
-                    enemyDefeated();
-                } else {
-                    resetForNextTurn();
-                }
+                if (enemyHP <= 0) enemyDefeated();
+                else resetForNextTurn();
             }, 1000);
         }
 
@@ -773,13 +894,11 @@
         }
 
         function enemyDefeated() {
+            messageLogEl.innerText = "Demon Banished! Chloe strikes a decisive blow!";
+            messageLogEl.style.color = "#d4af37";
             enemyContainer.classList.add('enemy-dead');
             
             enemiesDefeatedInLevel++;
-            const currentEnemyName = enemyNameEl.innerText;
-            
-            messageLogEl.innerText = `With a mighty swing, Chloe obliterated the ${currentEnemyName}!`;
-            messageLogEl.style.color = "#2ecc71";
             
             setTimeout(() => {
                 if (enemiesDefeatedInLevel >= enemiesPerLevel) {
@@ -791,6 +910,40 @@
         }
         
         function levelUp() {
+            const statsContainer = document.getElementById('summary-stats');
+            document.getElementById('summary-title').innerText = `Level ${currentLevel} Summary`;
+            
+            let summaryHTML = `
+                <div class="summary-row summary-header">
+                    <div>Equation</div>
+                    <div>Answer</div>
+                    <div>Result</div>
+                    <div>Time</div>
+                </div>
+            `;
+            
+            levelStats.forEach(stat => {
+                summaryHTML += `
+                    <div class="summary-row">
+                        <div>${stat.eq}</div>
+                        <div class="${stat.correct ? 'correct-text' : 'incorrect-text'}">${stat.ans}</div>
+                        <div class="${stat.correct ? 'correct-text' : 'incorrect-text'}">${stat.correct ? '✔️' : '❌'}</div>
+                        <div>${stat.time}s</div>
+                    </div>
+                `;
+            });
+            
+            statsContainer.innerHTML = summaryHTML;
+            document.getElementById('summary-modal').style.display = 'flex';
+        }
+
+        function closeSummaryModal() {
+            document.getElementById('summary-modal').style.display = 'none';
+            levelStats = []; 
+            processLevelUp();
+        }
+
+        function processLevelUp() {
             currentLevel++;
             enemiesDefeatedInLevel = 0;
             difficultyLevel = 0; 
@@ -803,14 +956,12 @@
                 mathUI.style.display = 'none';
                 timingUI.style.display = 'none';
                 
-                // Fade to silence upon absolute victory
                 if (isMusicPlaying) bgmTracks[currentLevelMusic].pause();
             } else {
                 levelInfoEl.innerText = `Level ${currentLevel}`;
                 messageLogEl.innerText = `LEVEL UP! Welcome to Level ${currentLevel}`;
                 messageLogEl.style.color = "#a8dadc";
                 
-                // Transition to the new heavier K-Pop beat for the next level!
                 playLevelMusic(currentLevel);
                 
                 setTimeout(spawnNextEnemy, 2000);
@@ -842,8 +993,8 @@
             mathUI.style.display = 'flex';
             strikeZoneEl.classList.remove('show-zone');
             
-            messageLogEl.innerText = `A new ${enemyData.name} appears! Prime your magic.`;
-            messageLogEl.style.color = "#a8dadc";
+            messageLogEl.innerText = `A wild ${enemyData.name} appears! The demon sneers at Chloe!`;
+            messageLogEl.style.color = "#ff6b6b";
             
             generateProblem();
         }
